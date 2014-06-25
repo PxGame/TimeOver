@@ -1,12 +1,12 @@
-﻿生成启动时间为 6/25/2014 10:18:09 PM。
+﻿生成启动时间为 6/26/2014 12:42:11 AM。
      1>项目“G:\学习\C++学习\TimeOver\TimeOver\TimeOver.vcxproj”在节点 2 上(build 个目标)。
      1>InitializeBuildStatus:
          正在创建“Debug\TimeOver.unsuccessfulbuild”，因为已指定“AlwaysCreate”。
        ClCompile:
          g:\ProgrammingSoftware\vs2010\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
          main.cpp
-     1>g:\学习\c++学习\timeover\timeover\main.cpp(90): warning C4805: “==”: 在操作中将类型“WPARAM”与类型“bool”混合不安全
-     1>g:\学习\c++学习\timeover\timeover\main.cpp(130): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+     1>g:\学习\c++学习\timeover\timeover\main.cpp(94): warning C4805: “==”: 在操作中将类型“WPARAM”与类型“bool”混合不安全
+     1>g:\学习\c++学习\timeover\timeover\main.cpp(134): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
                  g:\programmingsoftware\vs2010\vc\include\stdio.h(371) : 参见“sprintf”的声明
        Link:
          g:\ProgrammingSoftware\vs2010\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"G:\学习\C++学习\TimeOver\Debug\TimeOver.exe" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\TimeOver.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"G:\学习\C++学习\TimeOver\Debug\TimeOver.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"G:\学习\C++学习\TimeOver\Debug\TimeOver.lib" /MACHINE:X86 Debug\main.obj
@@ -21,4 +21,4 @@
 
 生成成功。
 
-已用时间 00:00:01.56
+已用时间 00:00:01.48

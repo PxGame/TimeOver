@@ -13,7 +13,10 @@ void InitializeWindow(HINSTANCE hInstance);
 void InitializeControl();
 //更新控件大小
 void UpdateControlSize();
+//设置字体
+void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight);
 
+//窗口类名
 LPSTR lpClassName = "Window";
 
 //获取屏幕大小,
@@ -21,8 +24,8 @@ UINT SCW = ::GetSystemMetrics(SM_CXSCREEN);
 UINT SCH = ::GetSystemMetrics(SM_CYSCREEN);
 
 //设置窗口大小
-UINT WinW = 500;
-UINT WinH = 300;
+UINT WinW = SCW;
+UINT WinH = SCH;
 
 //获取窗口用户区
 POINT pControl;//控件坐标
@@ -35,8 +38,8 @@ HWND hButton_1;//按钮1句柄
 HWND Static_1;//静态文本1句柄
 
 char strText[20];
-UINT uTime_Space = 0;//设置间隔时间
-UINT uTime_Residue = 10;//设置倒计时时间
+UINT uTime_Space = 5;//设置间隔时间，单位秒
+UINT uTime_Residue = 10;//设置倒计时时间，单位秒
 UINT uTime_Residue_Run = 0;
 
 
@@ -72,7 +75,8 @@ LRESULT CALLBACK WinProc (HWND hWnd,
     int wmEvent;
     switch (uMsg)
     {
-    case WM_CREATE :  
+    case WM_CREATE :        
+        ::SetTimer(hWnd, 1, uTime_Space*1000, TimerProc);//窗口初始化中的ShowWindow不能引起WM_SHOWWINDOW，所以在这设置间隔提醒时钟
         break;
     case WM_PAINT :        
         break;
@@ -89,13 +93,14 @@ LRESULT CALLBACK WinProc (HWND hWnd,
     case WM_SHOWWINDOW :
         if (wParam == true)
         {
+            uTime_Residue_Run = uTime_Residue;//初始化倒计时
             ::KillTimer(hWnd, 1);//关闭间隔时钟
-            ::SetTimer(::hWnd, 0, 1000, TimerProc);//倒计时时钟设置
+            ::SetTimer(::hWnd, 0, 1000, TimerProc);//倒计时时钟设置1s
         }
         else
         {
+            ::SetTimer(hWnd, 1, uTime_Space*1000, TimerProc);//间隔提醒时钟设置
             ::KillTimer(hWnd, 0);//关闭倒计时时钟
-            ::SetTimer(hWnd, 1, 10000, TimerProc);//间隔提醒时钟设置
         }
         break;
     case WM_SIZE :
@@ -125,7 +130,7 @@ void CALLBACK TimerProc (HWND hWnd,
     switch (nIDEvent)
     {
     case 0:
-        uTime_Residue_Run--;
+        ::uTime_Residue_Run--;
         sprintf (strText, "%d 秒后自动关机，请单击解除。", uTime_Residue_Run);
         ::SetWindowText(::hButton_1, strText);
         if (uTime_Residue_Run == 0)
@@ -135,7 +140,6 @@ void CALLBACK TimerProc (HWND hWnd,
         }
         break;
     case 1:        
-        uTime_Residue_Run = uTime_Residue;//初始化倒计时
         ::ShowWindow(hWnd, SW_SHOW);
         break;
     }
@@ -159,7 +163,7 @@ void InitializeWindow(HINSTANCE hInstance)
     ::RegisterClass(&wnd);
     
     //创建窗口,居中显示
-    ::hWnd = CreateWindow(::lpClassName, "提示", WS_OVERLAPPED | WS_SYSMENU | WS_THICKFRAME, 
+    ::hWnd = CreateWindow(::lpClassName, "提示",  WS_SYSMENU | WS_THICKFRAME | BS_MULTILINE, 
         (::SCW - ::WinW)/2, (::SCH - ::WinH)/2, ::WinW, ::WinH, 
         NULL, NULL, hInstance, NULL);
     
@@ -172,7 +176,7 @@ void InitializeWindow(HINSTANCE hInstance)
     InitializeControl();
 
     //显示窗口
-    ::ShowWindow(::hWnd, SW_SHOWNORMAL);
+    ::ShowWindow(::hWnd, SW_HIDE);
     ::UpdateWindow(::hWnd);
      
 }
@@ -189,11 +193,45 @@ void InitializeControl()
     //MessageBox (hWnd, ch, "检测数据",MB_OK);
     
     //添加控件
-    hButton_1 = CreateWindow("Button", "单击取消关机", BS_DEFPUSHBUTTON | WS_CHILD | WS_VISIBLE, 
+    hButton_1 = CreateWindow("Button", "单击取消关机", BS_DEFPUSHBUTTON | WS_CHILD | WS_VISIBLE | BS_CENTER, 
         ::pControl.x, ::pControl.y, ::wUser, ::hUser, ::hWnd, (HMENU)btnID_1, hInst, NULL);
+    SetFont(hButton_1, "楷体", ::wUser/16, 200);
 }
 void UpdateControlSize()
 {
     //更改按钮大小
     ::MoveWindow(::hButton_1, 0, 0, ::wUser, ::hUser, false);
+    //更改控件中的字体大小
+    SetFont(hButton_1, "楷体", ::wUser/16, 200);
+}
+//设置字体
+void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight)
+{
+    //HDC hdc = GetDC(hWnd);
+
+    LOGFONT LogFont;
+    ::memset(&LogFont, 0, sizeof(LOGFONT));
+    lstrcpy(LogFont.lfFaceName, FontName);
+    LogFont.lfWeight = Weight;
+    LogFont.lfHeight = Size; // 字体大小
+    LogFont.lfCharSet = 134;
+    LogFont.lfOutPrecision = 3;
+    LogFont.lfClipPrecision = 2;
+    LogFont.lfOrientation = 45;
+    LogFont.lfQuality = 1;
+    LogFont.lfPitchAndFamily = 2;
+
+    // 创建字体
+
+    HFONT hFont = CreateFontIndirect(&LogFont);
+
+    //LPTEXTMETRIC TM;//获取字体信息
+    //::GetTextMetrics(hdc, TM);
+
+    //设置背景
+
+    // 设置控件字体
+    ::SendMessage(hWnd, WM_SETFONT, (WPARAM)hFont, 0); 
+
+    //::ReleaseDC(hWnd, hdc);
 }
