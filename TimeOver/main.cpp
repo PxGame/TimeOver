@@ -15,6 +15,8 @@ void InitializeControl();
 void UpdateControlSize();
 //设置字体
 void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight);
+//操作系统控制
+void OperateSystemCantrol(UINT n);
 
 //窗口类名
 LPSTR lpClassName = "Window";
@@ -39,8 +41,11 @@ HWND Static_1;//静态文本1句柄
 
 char strText[20];
 UINT uTime_Space = 5;//设置间隔时间，单位秒
-UINT uTime_Residue = 10;//设置倒计时时间，单位秒
+UINT uTime_Residue = 5;//设置倒计时时间，单位秒
 UINT uTime_Residue_Run = 0;
+
+//设置OperateSystemCantrol模式
+UINT nOSC = 5;
 
 
 
@@ -62,9 +67,7 @@ int WINAPI WinMain (HINSTANCE hInstance,
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-
 	return 0;
-
 }
 LRESULT CALLBACK WinProc (HWND hWnd,        
     UINT uMsg,                              
@@ -133,10 +136,10 @@ void CALLBACK TimerProc (HWND hWnd,
         ::uTime_Residue_Run--;
         sprintf (strText, "%d 秒后自动关机，请单击解除。", uTime_Residue_Run);
         ::SetWindowText(::hButton_1, strText);
-        if (uTime_Residue_Run == 0)
+        if (uTime_Residue_Run == 0)//倒计时结束，执行关机或其他指令
         {
             ::KillTimer(::hWnd, 0);
-            MessageBox(NULL, "TimeOver!","！", MB_OK);
+            OperateSystemCantrol(nOSC);
         }
         break;
     case 1:        
@@ -195,7 +198,7 @@ void InitializeControl()
     //添加控件
     hButton_1 = CreateWindow("Button", "单击取消关机", BS_DEFPUSHBUTTON | WS_CHILD | WS_VISIBLE | BS_CENTER, 
         ::pControl.x, ::pControl.y, ::wUser, ::hUser, ::hWnd, (HMENU)btnID_1, hInst, NULL);
-    SetFont(hButton_1, "楷体", ::wUser/16, 200);
+    SetFont(hButton_1, "楷体", ::wUser/16, 200);//hButton_1设置字体
 }
 void UpdateControlSize()
 {
@@ -234,4 +237,53 @@ void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight)
     ::SendMessage(hWnd, WM_SETFONT, (WPARAM)hFont, 0); 
 
     //::ReleaseDC(hWnd, hdc);
+}
+void OperateSystemCantrol(UINT n)
+{
+    //-------------------------------调整进程权限
+    HANDLE handle;//进程访问令牌的句柄
+    TOKEN_PRIVILEGES tkp; //特权令牌
+    int result;//是否正确执行
+
+    if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &handle))//获得进程访问令牌的句柄
+    {
+        MessageBox(NULL, "OpenProcessToken failed!", "错误", NULL);   //获得进程句柄失败
+        ::PostQuitMessage(0);
+    }
+    ::LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME ,&tkp.Privileges[0].Luid);//获得本地机唯一的标识
+    tkp.PrivilegeCount = 1;//只有一个标识
+    tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;//打开Luid对应的特权
+    result = AdjustTokenPrivileges(handle, FALSE, &tkp, 0, NULL, 0);   //调整获得的权限
+    if (result != TRUE)
+    {
+        MessageBox(NULL, "AdjustTokenPrivileges enable failed!", "错误", NULL);  //修改权限失败
+        ::PostQuitMessage(0);
+    }
+    //---------------------------------------------------------
+
+    switch (n)
+    {
+    case 0://正常关机
+        result = ::InitiateSystemShutdown(NULL ,NULL, 0, FALSE, FALSE);//ExitWindowsEx(EWX_SHUTDOWNF,0);
+        break;
+    case 1://强制关机
+        result = ::InitiateSystemShutdown(NULL ,NULL, 0, TRUE, FALSE);//ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE,0);
+        break;
+    case 2://重启
+        result = ::InitiateSystemShutdown(NULL ,NULL, 0, FALSE, TRUE);//ExitWindowsEx(EWX_REBOOT,0);
+        break;
+    case 3://强制重启
+        result = ::InitiateSystemShutdown(NULL ,NULL, 0, TRUE, TRUE);//ExitWindowsEx(EWX_REBOOT | EWX_FORCE,0);
+        break;
+    case 4://销注
+        result = ExitWindowsEx(EWX_LOGOFF,0);
+        break;
+    case 5://锁定用户
+        result = ::LockWorkStation();
+        break;
+    }
+    if (result != TRUE)
+    {
+        MessageBox(NULL, "OperateSystemCantrol enable failed!", "错误", NULL);//系统控制失败
+    }
 }
