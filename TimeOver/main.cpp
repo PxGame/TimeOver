@@ -1,6 +1,7 @@
 # include <Windows.h>
 # include <iostream>
 # include <string>
+# include <WinBase.h>
 using namespace std;
 
 # define btnID_1 1000 //定义按钮1的资源ID
@@ -21,6 +22,8 @@ void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight);
 void OperateSystemControl(UINT n);
 //通过TimeOverControlInfo.txt文件设置参数
 void SystemControlFile();
+//设置开机启动
+void SetWinStart (UINT n);
 
 //窗口类名
 LPSTR lpClassName = "Window";
@@ -48,20 +51,22 @@ HWND Static_1;                  //静态文本1句柄
 POINT pControl;                 //控件坐标
 
 //计时器设置
-UINT uTime_Space = 5;           //设置间隔时间，单位秒
-UINT uTime_Residue = 5;         //设置倒计时时间，单位秒
+UINT uTime_Space = 7200;           //设置默认间隔时间，单位秒
+UINT uTime_Residue = 120;         //设置默认倒计时时间，单位秒
 UINT uTime_Residue_Run = 0;
 
-//设置OperateSystemControl模式
-UINT nOSC = 5;
+//设置OperateSystemControl
+UINT nOSC = 5;//模式模式
+UINT nOSO = 2;//设置开机启动
+
+//程序完整路径
+char filePath[256]= {};
 
 //文本格式化用
 char strText[20] = {};
-string str;
 
 //文件指针
 FILE *file;
-
 
 int WINAPI WinMain (HINSTANCE hInstance,    
     HINSTANCE hPrevInstance,                
@@ -73,7 +78,8 @@ int WINAPI WinMain (HINSTANCE hInstance,
 
     //通过TimeOverControlInfo.txt文件设置参数
     SystemControlFile();
-
+    //设置是否开机启动
+    SetWinStart (nOSO);
     //初始化
     InitializeWindow(hInstance);
 
@@ -89,7 +95,7 @@ LRESULT CALLBACK WinProc (HWND hWnd,
     int wmEvent;
     switch (uMsg)
     {
-    case WM_CREATE :        
+    case WM_CREATE :  
         ::SetTimer(hWnd, 1, uTime_Space*1000, TimerProc);//窗口初始化中的ShowWindow不能引起WM_SHOWWINDOW，所以在这设置间隔提醒时钟
         break;
     case WM_PAINT :        
@@ -105,7 +111,7 @@ LRESULT CALLBACK WinProc (HWND hWnd,
         }
         break;
     case WM_SHOWWINDOW :
-        if (wParam == true)
+        if (wParam == TRUE)
         {
             uTime_Residue_Run = uTime_Residue;//初始化倒计时
 
@@ -158,7 +164,7 @@ void CALLBACK TimerProc (HWND hWnd,
             OperateSystemControl(nOSC);
         }
         break;
-    case 1:        
+    case 1:      
         ::ShowWindow(hWnd, SW_SHOW);
         break;
     }
@@ -183,7 +189,7 @@ void InitializeWindow(HINSTANCE hInstance)
     ::RegisterClass(&wnd);
     
     //创建窗口,居中显示
-    ::hWnd = CreateWindow(::lpClassName, "提示",  WS_SYSMENU | WS_THICKFRAME | BS_MULTILINE, 
+    ::hWnd = CreateWindow(::lpClassName, "提示",  /*WS_SYSMENU |*/ WS_THICKFRAME | BS_MULTILINE, 
         (::SCW - ::WinW)/2, (::SCH - ::WinH)/2, ::WinW, ::WinH, 
         NULL, NULL, hInstance, NULL);
     
@@ -322,10 +328,44 @@ void SystemControlFile()
     if (!file)
     {
         file = fopen("TimeOverControlInfo.txt", "a");
-        fprintf (file, "%d+%d+%d\n设置格式为：间隔提醒时间+倒计时时间+模式\n单位均为秒,且只能在文件开头处顶格输入，用‘+’分开，中间不能有空格，不能为其他内容。\n模式:\n0，正常关机\n1，强制关机\n2，重启\n3，强制重启\n4，销注\n5，锁定用户\n", 
-            uTime_Space, uTime_Residue, nOSC);
+        fprintf (file, "%d+%d+%d+%d\n设置格式为：间隔提醒时间+倒计时时间+模式+开机是否启动\n单位均为秒,且只能在文件开头处顶格输入，用‘+’分开，中间不能有空格，不能为其他内容。\n模式: 0，正常关机   1，强制关机   2，重启   3，强制重启   4，销注   5，锁定用户\n是否开机启动： 0，开机不启动  1，开机启动   2，默认设置（不启动）", 
+            uTime_Space, uTime_Residue, nOSC, nOSO);
         fclose (file);
         file = fopen("TimeOverControlInfo.txt", "r+");
     }
-    fscanf (file, "%d+%d+%d", &uTime_Space, &uTime_Residue, &nOSC);
+    fscanf (file, "%d+%d+%d+%d", &uTime_Space, &uTime_Residue, &nOSC, &nOSO);
+}
+
+void SetWinStart (UINT n)
+{
+    HKEY hKey;
+    int result = 0;
+    ::GetModuleFileName(hInst, filePath, 256);//获取程序完整路径
+
+    ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS , &hKey);
+
+    switch (n)
+    {
+    case 0://取消开机启动
+        result = ::RegDeleteValue(hKey, "TimeOver");
+        break;
+    case 1://设置开机启动
+        result = ::RegSetValueEx(hKey, "TimeOver", 0, REG_SZ, (BYTE*)filePath, 256);//添加注册表
+        break;
+    case 2://不做任何设置
+        result = 0;
+        break;
+    }
+
+    ::RegCloseKey(hKey);
+
+    if (result)//判断是否成功
+    {
+        MessageBox(NULL, "SetWinStart enable fail!", "错误", NULL);
+    }
+}
+
+void BubbleMsg(char *ch)
+{
+    MessageBox(NULL, ch, "提示", NULL);
 }
