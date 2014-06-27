@@ -1,5 +1,7 @@
 # include <Windows.h>
 # include <iostream>
+# include <string>
+using namespace std;
 
 # define btnID_1 1000 //定义按钮1的资源ID
 
@@ -16,10 +18,15 @@ void UpdateControlSize();
 //设置字体
 void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight);
 //操作系统控制
-void OperateSystemCantrol(UINT n);
+void OperateSystemControl(UINT n);
+//通过TimeOverControlInfo.txt文件设置参数
+void SystemControlFile();
 
 //窗口类名
 LPSTR lpClassName = "Window";
+
+//消息循环
+MSG msg;
 
 //获取屏幕大小,
 UINT SCW = ::GetSystemMetrics(SM_CXSCREEN);
@@ -30,23 +37,30 @@ UINT WinW = SCW;
 UINT WinH = SCH;
 
 //获取窗口用户区
-POINT pControl;//控件坐标
-RECT rtUser;//用户区坐标
-int wUser;//宽
-int hUser;//高
-HINSTANCE hInst;//句柄实例
-HWND hWnd;//主窗口句柄
-HWND hButton_1;//按钮1句柄
-HWND Static_1;//静态文本1句柄
+RECT rtUser;                    //用户区坐标
+int wUser;                      //宽
+int hUser;                      //高
+HINSTANCE hInst;                //句柄实例
+HWND hWnd;                      //主窗口句柄
+HWND hButton_1;                 //按钮1句柄
+HWND Static_1;                  //静态文本1句柄
 
-char strText[20];
-UINT uTime_Space = 5;//设置间隔时间，单位秒
-UINT uTime_Residue = 5;//设置倒计时时间，单位秒
+POINT pControl;                 //控件坐标
+
+//计时器设置
+UINT uTime_Space = 5;           //设置间隔时间，单位秒
+UINT uTime_Residue = 5;         //设置倒计时时间，单位秒
 UINT uTime_Residue_Run = 0;
 
-//设置OperateSystemCantrol模式
+//设置OperateSystemControl模式
 UINT nOSC = 5;
 
+//文本格式化用
+char strText[20] = {};
+string str;
+
+//文件指针
+FILE *file;
 
 
 int WINAPI WinMain (HINSTANCE hInstance,    
@@ -57,18 +71,15 @@ int WINAPI WinMain (HINSTANCE hInstance,
     //复制
     ::hInst = hInstance;
 
-    //初始化窗口
+    //通过TimeOverControlInfo.txt文件设置参数
+    SystemControlFile();
+
+    //初始化
     InitializeWindow(hInstance);
 
-    //消息循环
-    MSG msg;
-    while(GetMessage(&msg,NULL,0,0))
-	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
 	return 0;
 }
+
 LRESULT CALLBACK WinProc (HWND hWnd,        
     UINT uMsg,                              
     WPARAM wParam,                          
@@ -97,12 +108,16 @@ LRESULT CALLBACK WinProc (HWND hWnd,
         if (wParam == true)
         {
             uTime_Residue_Run = uTime_Residue;//初始化倒计时
+
+            sprintf (strText, "%d 秒后自动关机，请单击解除。", uTime_Residue_Run);
+            ::SetWindowText(::hButton_1, strText);//初始化按钮文本
+
             ::KillTimer(hWnd, 1);//关闭间隔时钟
-            ::SetTimer(::hWnd, 0, 1000, TimerProc);//倒计时时钟设置1s
+            ::SetTimer(::hWnd, 0, 1000, TimerProc);//倒计时时钟设置为1秒
         }
         else
         {
-            ::SetTimer(hWnd, 1, uTime_Space*1000, TimerProc);//间隔提醒时钟设置
+            ::SetTimer(hWnd, 1, uTime_Space*1000, TimerProc);//间隔提醒时钟设置为uTime_Space秒
             ::KillTimer(hWnd, 0);//关闭倒计时时钟
         }
         break;
@@ -125,6 +140,7 @@ LRESULT CALLBACK WinProc (HWND hWnd,
     }
     return ::DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
+
 void CALLBACK TimerProc (HWND hWnd,         
     UINT uMsg,                              
     UINT nIDEvent,                          
@@ -139,7 +155,7 @@ void CALLBACK TimerProc (HWND hWnd,
         if (uTime_Residue_Run == 0)//倒计时结束，执行关机或其他指令
         {
             ::KillTimer(::hWnd, 0);
-            OperateSystemCantrol(nOSC);
+            OperateSystemControl(nOSC);
         }
         break;
     case 1:        
@@ -147,6 +163,7 @@ void CALLBACK TimerProc (HWND hWnd,
         break;
     }
 }
+
 void InitializeWindow(HINSTANCE hInstance)
 {
     //创建窗口类
@@ -181,8 +198,15 @@ void InitializeWindow(HINSTANCE hInstance)
     //显示窗口
     ::ShowWindow(::hWnd, SW_HIDE);
     ::UpdateWindow(::hWnd);
-     
+    
+    //消息循环
+    while(GetMessage(&msg,NULL,0,0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}     
 }
+
 void InitializeControl()
 {
     //设置控件坐标
@@ -200,6 +224,7 @@ void InitializeControl()
         ::pControl.x, ::pControl.y, ::wUser, ::hUser, ::hWnd, (HMENU)btnID_1, hInst, NULL);
     SetFont(hButton_1, "楷体", ::wUser/16, 200);//hButton_1设置字体
 }
+
 void UpdateControlSize()
 {
     //更改按钮大小
@@ -207,6 +232,7 @@ void UpdateControlSize()
     //更改控件中的字体大小
     SetFont(hButton_1, "楷体", ::wUser/16, 200);
 }
+
 //设置字体
 void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight)
 {
@@ -238,7 +264,8 @@ void SetFont(HWND hWnd, LPSTR FontName, int Size, int Weight)
 
     //::ReleaseDC(hWnd, hdc);
 }
-void OperateSystemCantrol(UINT n)
+
+void OperateSystemControl(UINT n)
 {
     //-------------------------------调整进程权限
     HANDLE handle;//进程访问令牌的句柄
@@ -284,6 +311,21 @@ void OperateSystemCantrol(UINT n)
     }
     if (result != TRUE)
     {
-        MessageBox(NULL, "OperateSystemCantrol enable failed!", "错误", NULL);//系统控制失败
+        MessageBox(NULL, "OperateSystemControl enable failed!", "错误", NULL);//系统控制失败
     }
+}
+
+void SystemControlFile()
+{
+    char ch[100] = {};
+    file = fopen("TimeOverControlInfo.txt", "r+");
+    if (!file)
+    {
+        file = fopen("TimeOverControlInfo.txt", "a");
+        fprintf (file, "%d+%d+%d\n设置格式为：间隔提醒时间+倒计时时间+模式\n单位均为秒,且只能在文件开头处顶格输入，用‘+’分开，中间不能有空格，不能为其他内容。\n模式:\n0，正常关机\n1，强制关机\n2，重启\n3，强制重启\n4，销注\n5，锁定用户\n", 
+            uTime_Space, uTime_Residue, nOSC);
+        fclose (file);
+        file = fopen("TimeOverControlInfo.txt", "r+");
+    }
+    fscanf (file, "%d+%d+%d", &uTime_Space, &uTime_Residue, &nOSC);
 }
